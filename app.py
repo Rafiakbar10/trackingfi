@@ -4,28 +4,46 @@ import re
 
 app = Flask(__name__)
 
-# Mengubah struktur database menjadi domain saja agar URL bisa dirakit otomatis dan lebih bersih
+# Database Platform Komprehensif untuk Desk Collection / OSINT
 PLATFORMS = {
     "Media Sosial Utama": [
         {"name": "Facebook", "domain": "facebook.com"},
         {"name": "Instagram", "domain": "instagram.com"},
         {"name": "TikTok", "domain": "tiktok.com"},
+        {"name": "Threads", "domain": "threads.net"},
         {"name": "Twitter / X", "domain": "twitter.com"},
         {"name": "Pinterest", "domain": "pinterest.com"},
         {"name": "YouTube", "domain": "youtube.com"}
     ],
+    "Forum & Komunitas": [
+        {"name": "Kaskus", "domain": "kaskus.co.id"},
+        {"name": "Reddit", "domain": "reddit.com"},
+        {"name": "Medium", "domain": "medium.com"},
+        {"name": "GitHub (IT/Tech)", "domain": "github.com"}
+    ],
     "Jejak Karir & Profesional": [
         {"name": "LinkedIn", "domain": "linkedin.com/in"},
         {"name": "JobStreet", "domain": "jobstreet.co.id"},
-        {"name": "Glints", "domain": "glints.com/id"}
+        {"name": "Glints", "domain": "glints.com/id"},
+        {"name": "Fastwork (Freelance)", "domain": "fastwork.id"},
+        {"name": "Sribulancer", "domain": "sribulancer.com"}
     ],
     "Marketplace & Transaksi": [
         {"name": "Shopee", "domain": "shopee.co.id"},
         {"name": "Tokopedia", "domain": "tokopedia.com"},
         {"name": "Bukalapak", "domain": "bukalapak.com"},
-        {"name": "Carousell", "domain": "carousell.co.id"}
+        {"name": "Carousell (Barang Bekas)", "domain": "carousell.co.id"},
+        {"name": "OLX Indonesia", "domain": "olx.co.id"},
+        {"name": "Lazada", "domain": "lazada.co.id"},
+        {"name": "Blibli", "domain": "blibli.com"}
     ],
-    "Jejak Publik & Dokumen": [
+    "Kreator & Donasi (Sering Bocor Identitas)": [
+        {"name": "Trakteer", "domain": "trakteer.id"},
+        {"name": "Saweria", "domain": "saweria.co"},
+        {"name": "Sociabuzz", "domain": "sociabuzz.com"}
+    ],
+    "Jejak Publik, Dokumen & Hukum": [
+        {"name": "Putusan Mahkamah Agung (Kasus Hukum)", "domain": "putusan3.mahkamahagung.go.id"},
         {"name": "Scribd (Dokumen/Tugas)", "domain": "scribd.com"},
         {"name": "Blogspot / WordPress", "domain": "blogspot.com OR site:wordpress.com"},
         {"name": "GetContact (Web)", "domain": "getcontact.com"}
@@ -44,7 +62,7 @@ def index():
         query_type = request.form.get("query_type", "name")
 
         if query:
-            # Fitur Nomor WhatsApp
+            # Fitur Link Langsung WhatsApp
             if query_type == "phone":
                 phone_num = re.sub(r'\D', '', query)
                 if phone_num.startswith('0'):
@@ -55,15 +73,13 @@ def index():
                 if phone_num:
                     wa_link = f"https://wa.me/{phone_num}"
 
-            # Generate Link Pencarian Google Dork yang lebih fleksibel
+            # Generate Link Pencarian Google Dork Cerdas
             for category, platforms in PLATFORMS.items():
                 results[category] = []
                 for platform in platforms:
-                    # Rumus Dork: site:domain.com "nama lengkap" OR nama lengkap
-                    # Ini menyuruh Google: "Cari yang urutannya sama persis, JIKA TIDAK ADA, cari yang kata-katanya ada di halaman itu"
+                    # Rumus Dork: site:domain.com "query" OR query
                     dork_query = f'site:{platform["domain"]} "{query}" OR {query}'
                     
-                    # URL Encode yang standar agar karakter seperti spasi, titik, atau kutip tidak merusak link Google
                     params = {'q': dork_query}
                     google_search_url = "https://www.google.com/search?" + urllib.parse.urlencode(params)
                     
@@ -72,10 +88,10 @@ def index():
                         "link": google_search_url
                     })
 
-            # Menambahkan fitur Pencarian Universal (Bebas di seluruh internet)
+            # Fitur Pencarian Bebas (Universal) ditambahkan di urutan pertama pada Jejak Publik
             universal_dork = f'"{query}" OR {query}'
-            results["Jejak Publik & Dokumen"].insert(0, {
-                "name": "Pencarian Universal Internet",
+            results["Jejak Publik, Dokumen & Hukum"].insert(0, {
+                "name": "Pencarian Universal (Seluruh Internet)",
                 "link": "https://www.google.com/search?" + urllib.parse.urlencode({'q': universal_dork})
             })
 
