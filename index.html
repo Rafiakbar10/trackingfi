@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Social Finder — Public OSINT</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#0b1020;color:#eef2ff}
+.wrap{max-width:1000px;margin:auto;padding:42px 20px}
+.card{background:#121a30;border:1px solid #263252;border-radius:18px;padding:24px;box-shadow:0 15px 45px #0004}
+h1{margin:0 0 8px;font-size:32px}.muted{color:#9da9c7}
+.form{display:flex;gap:10px;margin:22px 0}.form input,.form select{background:#0b1020;color:white;border:1px solid #34405f;border-radius:10px;padding:13px}
+.form input{flex:1}.form button{border:0;border-radius:10px;padding:13px 20px;cursor:pointer;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:20px}
+.item{border:1px solid #293657;border-radius:14px;padding:16px;background:#0f1629}
+.item h3{margin:0 0 8px}.status{font-size:13px}.possible{color:#f8d66d}.not_found{color:#8f9bb8}.unknown{color:#ff9d9d}
+a{color:#8ab4ff;text-decoration:none}.note{font-size:13px;line-height:1.6;margin-top:18px;color:#9da9c7}
+.badge{display:inline-block;padding:4px 8px;border-radius:20px;background:#202b49;font-size:12px}
+@media(max-width:650px){.form{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <span class="badge">PUBLIC OSINT</span>
+    <h1>Social Finder</h1>
+    <div class="muted">Cari jejak profil publik berdasarkan username.</div>
+
+    <form class="form" id="form">
+      <select id="mode">
+        <option value="username">Username</option>
+        <option value="phone">Nomor HP — validasi saja</option>
+      </select>
+      <input id="query" placeholder="contoh: johndoe" autocomplete="off">
+      <button type="submit">SEARCH</button>
+    </form>
+
+    <div id="message" class="muted"></div>
+    <div id="results" class="grid"></div>
+
+    <div class="note">
+      Catatan: website ini hanya memeriksa URL profil yang dapat diakses publik.
+      “Possible” bukan berarti akun tersebut pasti milik orang yang dicari.
+      Jangan gunakan untuk membypass privasi, login, atau mengakses data nonpublik.
+    </div>
+  </div>
+</div>
+
+<script>
+const form=document.getElementById('form');
+const query=document.getElementById('query');
+const mode=document.getElementById('mode');
+const results=document.getElementById('results');
+const message=document.getElementById('message');
+
+form.addEventListener('submit', async e=>{
+  e.preventDefault();
+  results.innerHTML='';
+  message.textContent='Mencari halaman publik...';
+
+  try{
+    const r=await fetch('/api/search',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:query.value,mode:mode.value})
+    });
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'Terjadi kesalahan');
+
+    if(data.message){
+      message.textContent=data.message;
+      return;
+    }
+
+    message.textContent=`Hasil untuk "${data.query}"`;
+    for(const x of data.results){
+      const div=document.createElement('div');
+      div.className='item';
+      div.innerHTML=`
+        <h3>${escapeHtml(x.platform)}</h3>
+        <div class="status ${x.status}">${escapeHtml(x.status)}</div>
+        ${x.url ? `<p><a href="${escapeAttr(x.url)}" target="_blank" rel="noopener noreferrer">Buka profil</a></p>` : ''}
+        ${x.http_status ? `<small>HTTP ${x.http_status}</small>` : ''}
+      `;
+      results.appendChild(div);
+    }
+  }catch(err){ message.textContent=err.message; }
+});
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function escapeAttr(s){return escapeHtml(s);}
+</script>
+</body>
+</html>
