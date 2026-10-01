@@ -3,14 +3,15 @@ import urllib.parse
 
 app = Flask(__name__)
 
+# Menggunakan teknik pencarian web (Google Dork style) untuk akurasi tinggi
 PLATFORMS = [
-    {"name": "Instagram", "url": "https://www.instagram.com/{}"},
-    {"name": "TikTok", "url": "https://www.tiktok.com/@{}"},
-    {"name": "Facebook", "url": "https://www.facebook.com/public/{}"},
-    {"name": "LinkedIn", "url": "https://www.linkedin.com/pub/dir?firstName={}&lastName=&trkid=bf-guest-home-page-guest-search-submit"},
-    {"name": "Pinterest", "url": "https://www.pinterest.com/search/users/?q={}"},
-    {"name": "Twitter / X", "url": "https://x.com/search?q={}&src=typed_query"},
-    {"name": "GitHub", "url": "https://github.com/search?q={}&type=users"}
+    {"name": "LinkedIn", "url": "https://www.google.com/search?q=site:linkedin.com/in/+\"{}\""},
+    {"name": "Instagram", "url": "https://www.google.com/search?q=site:instagram.com+\"{}\""},
+    {"name": "TikTok", "url": "https://www.google.com/search?q=site:tiktok.com+\"{}\""},
+    {"name": "Facebook", "url": "https://www.google.com/search?q=site:facebook.com+\"{}\""},
+    {"name": "Pinterest", "url": "https://www.google.com/search?q=site:pinterest.com+\"{}\""},
+    {"name": "Twitter / X", "url": "https://www.google.com/search?q=site:twitter.com+\"{}\""},
+    {"name": "GitHub", "url": "https://www.google.com/search?q=site:github.com+\"{}\""}
 ]
 
 @app.route("/", methods=["GET", "POST"])
@@ -21,21 +22,15 @@ def index():
 
     if request.method == "POST":
         query = request.form.get("query", "").strip()
-        query_type = request.form.get("query_type", "name")
+        query_type = query.get("query_type", "name") # Memperbaiki ambil data form
 
         if query:
             clean_query = urllib.parse.quote(query)
-            formatted_username = query.lower().replace(" ", "")
 
             for platform in PLATFORMS:
-                if query_type == "name":
-                    target = clean_query if "LinkedIn" in platform["name"] or "Pinterest" in platform["name"] or "Twitter" in platform["name"] else formatted_username
-                else:
-                    target = clean_query
-
                 results.append({
                     "platform": platform["name"],
-                    "link": platform["url"].format(target)
+                    "link": platform["url"].format(clean_query)
                 })
 
     return render_template("index.html", results=results, query=query, query_type=query_type)
