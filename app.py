@@ -22,7 +22,7 @@ def index():
 
     if request.method == "POST":
         query = request.form.get("query", "").strip()
-        query_type = query.get("query_type", "name") # Memperbaiki ambil data form
+        query_type = request.form.get("query_type", "name")  # Diperbaiki agar mengambil dari request.form
 
         if query:
             clean_query = urllib.parse.quote(query)
