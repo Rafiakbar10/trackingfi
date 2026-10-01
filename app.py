@@ -1,99 +1,44 @@
-from flask import Flask, render_template, request, jsonify
-import re
-import requests
-from urllib.parse import quote
+from flask import Flask, render_template, request
+import urllib.parse
 
 app = Flask(__name__)
 
-PLATFORMS = {
-    "Instagram": "https://www.instagram.com/{q}/",
-    "TikTok": "https://www.tiktok.com/@{q}",
-    "Facebook": "https://www.facebook.com/{q}",
-    "LinkedIn": "https://www.linkedin.com/in/{q}/",
-    "Pinterest": "https://www.pinterest.com/{q}/",
-    "X": "https://x.com/{q}",
-    "YouTube": "https://www.youtube.com/@{q}",
-    "GitHub": "https://github.com/{q}",
-    "Reddit": "https://www.reddit.com/user/{q}/",
-    "Telegram": "https://t.me/{q}",
-}
+PLATFORMS = [
+    {"name": "Instagram", "url": "https://www.instagram.com/{}"},
+    {"name": "TikTok", "url": "https://www.tiktok.com/@{}"},
+    {"name": "Facebook", "url": "https://www.facebook.com/public/{}"},
+    {"name": "LinkedIn", "url": "https://www.linkedin.com/pub/dir?firstName={}&lastName=&trkid=bf-guest-home-page-guest-search-submit"},
+    {"name": "Pinterest", "url": "https://www.pinterest.com/search/users/?q={}"},
+    {"name": "Twitter / X", "url": "https://x.com/search?q={}&src=typed_query"},
+    {"name": "GitHub", "url": "https://github.com/search?q={}&type=users"}
+]
 
-USERNAME_RE = re.compile(r"^[A-Za-z0-9._-]{2,80}$")
-
-def clean_username(value):
-    value = value.strip()
-    value = re.sub(r"^@", "", value)
-    return value
-
-def public_profile_check(url):
-    """Best-effort public URL check. A result is only a lead, not identity proof."""
-    try:
-        r = requests.get(
-            url,
-            timeout=7,
-            allow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 SocialFinder/1.0"}
-        )
-        # Some platforms return 200 for login/challenge pages, so HTTP 200
-        # is deliberately marked as 'possible', not 'confirmed'.
-        if 200 <= r.status_code < 300:
-            return {"status": "possible", "http_status": r.status_code, "url": r.url}
-        if r.status_code == 404:
-            return {"status": "not_found", "http_status": r.status_code, "url": url}
-        return {"status": "unknown", "http_status": r.status_code, "url": url}
-    except requests.RequestException as e:
-        return {"status": "unknown", "error": str(e), "url": url}
-
-@app.get("/")
+@app.route("/", methods=["GET", "POST"])
 def index():
-    return render_template("index.html")
-
-@app.post("/api/search")
-def search():
-    data = request.get_json(silent=True) or {}
-    query = str(data.get("query", "")).strip()
-    mode = data.get("mode", "username")
-
-    if not query:
-        return jsonify({"error": "Masukkan username atau kata pencarian."}), 400
-
-    if mode == "phone":
-        # Do not attempt to reverse-map private phone numbers to social accounts.
-        digits = re.sub(r"\D", "", query)
-        if len(digits) < 8:
-            return jsonify({"error": "Nomor HP tampaknya tidak valid."}), 400
-        return jsonify({
-            "mode": "phone",
-            "query": query,
-            "message": "Pencarian nomor HP langsung ke akun sosial tidak dilakukan. "
-                       "Gunakan username publik atau layanan/API resmi yang memiliki izin."
-        })
-
-    username = clean_username(query)
-    if not USERNAME_RE.match(username):
-        return jsonify({"error": "Untuk mode username gunakan 2–80 karakter: huruf, angka, titik, _, atau -."}), 400
-
     results = []
-    for name, template in PLATFORMS.items():
-        url = template.format(q=quote(username))
-        result = public_profile_check(url)
-        result["platform"] = name
-        results.append(result)
+    query = ""
+    query_type = ""
 
-    return jsonify({
-        "mode": "username",
-        "query": username,
-        "disclaimer": "Hasil adalah lead berdasarkan halaman publik; bukan verifikasi identitas.",
-        "results": results
-    })
+    if request.method == "POST":
+        query = request.form.get("query", "").strip()
+        query_type = request.form.get("query_type", "name")
 
-@app.get("/api/health")
-def health():
-    return jsonify({"ok": True})
+        if query:
+            clean_query = urllib.parse.quote(query)
+            formatted_username = query.lower().replace(" ", "")
+
+            for platform in PLATFORMS:
+                if query_type == "name":
+                    target = clean_query if "LinkedIn" in platform["name"] or "Pinterest" in platform["name"] or "Twitter" in platform["name"] else formatted_username
+                else:
+                    target = clean_query
+
+                results.append({
+                    "platform": platform["name"],
+                    "link": platform["url"].format(target)
+                })
+
+    return render_template("index.html", results=results, query=query, query_type=query_type)
 
 if __name__ == "__main__":
-    import os
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000))
-    )
+    app.run(host="0.0.0.0", port=5000)
