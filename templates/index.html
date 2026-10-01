@@ -3,38 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Social Media Tracker</title>
+    <title>Advanced OSINT Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-900 text-white min-h-screen p-6 flex flex-col items-center">
-    <div class="max-w-xl w-full bg-slate-800 p-8 rounded-xl shadow-lg mt-10 border border-slate-700">
-        <h1 class="text-2xl font-bold text-center text-indigo-400 mb-6">Social Media Finder</h1>
+<body class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white min-h-screen p-6 font-sans">
+    <!-- UI Glassmorphism -->
+    <div class="max-w-5xl mx-auto bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl shadow-2xl mt-8">
         
-        <form method="POST" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Tipe Pencarian</label>
-                <select name="query_type" class="w-full p-3 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:border-indigo-500">
-                    <option value="name">Nama Lengkap / Username</option>
-                    <option value="phone">Nomor HP</option>
-                </select>
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
+                Advanced Collection Tracker
+            </h1>
+            <p class="text-slate-300 text-sm">Intelijen Jejak Digital & Profiling Nasabah</p>
+        </div>
+        
+        <form method="POST" class="space-y-5 bg-black/20 p-6 rounded-xl border border-white/5">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="col-span-1">
+                    <label class="block text-sm font-semibold mb-2 text-slate-200">Mode Pelacakan</label>
+                    <select name="query_type" class="w-full p-3 rounded-lg bg-slate-800/80 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                        <option value="name" {% if query_type == 'name' %}selected{% endif %}>Nama Lengkap / Username</option>
+                        <option value="phone" {% if query_type == 'phone' %}selected{% endif %}>Nomor Handphone</option>
+                    </select>
+                </div>
+                <div class="col-span-1 md:col-span-2">
+                    <label class="block text-sm font-semibold mb-2 text-slate-200">Target Intelijen</label>
+                    <input type="text" name="query" value="{{ query }}" placeholder="Masukkan nama atau nomor (cth: 08123456...)" required class="w-full p-3 rounded-lg bg-slate-800/80 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-slate-400">
+                </div>
             </div>
-            
-            <div>
-                <label class="block text-sm font-medium mb-1">Target / Input</label>
-                <input type="text" name="query" placeholder="Contoh: Budi Santoso atau 081234567890" required class="w-full p-3 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:border-indigo-500">
-            </div>
-
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-lg font-semibold transition">Cari Media Sosial</button>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 py-3.5 rounded-lg font-bold tracking-wide transition-all shadow-lg hover:shadow-blue-500/30">
+                Jalankan Proses Identifikasi
+            </button>
         </form>
 
-        {% if results %}
-        <div class="mt-8 border-t border-slate-700 pt-6">
-            <h2 class="text-lg font-semibold mb-4">Hasil Tautan Profil untuk: <span class="text-indigo-400">{{ query }}</span></h2>
-            <div class="space-y-3">
-                {% for item in results %}
-                <div class="flex items-center justify-between bg-slate-700 p-3 rounded-lg">
-                    <span class="font-medium">{{ item.platform }}</span>
-                    <a href="{{ item.link }}" target="_blank" class="text-xs bg-indigo-500 hover:bg-indigo-400 text-white py-1.5 px-3 rounded-md transition">Buka Tautan</a>
+        {% if query %}
+        <div class="mt-10 border-t border-white/10 pt-8">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <span class="w-2 h-6 bg-blue-500 rounded-full inline-block"></span>
+                Hasil Analisis Target: <span class="text-emerald-400">"{{ query }}"</span>
+            </h2>
+
+            <!-- Tombol Direct WhatsApp Jika Input Adalah Nomor -->
+            {% if wa_link %}
+            <div class="mb-8 bg-emerald-900/40 border border-emerald-500/30 p-5 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-emerald-400 font-bold text-lg">Jalur Komunikasi Ditemukan!</h3>
+                    <p class="text-sm text-slate-300">Nomor ini dapat dihubungi langsung via WhatsApp tanpa perlu menyimpan kontak.</p>
+                </div>
+                <a href="{{ wa_link }}" target="_blank" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors shadow-lg whitespace-nowrap">
+                    Buka Chat WhatsApp
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Grid Hasil Pencarian Berdasarkan Kategori -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for category, platforms in results.items() %}
+                <div class="bg-black/20 p-5 rounded-xl border border-white/5">
+                    <h3 class="text-blue-300 font-bold mb-4 border-b border-white/10 pb-2">{{ category }}</h3>
+                    <div class="space-y-2">
+                        {% for item in platforms %}
+                        <div class="flex items-center justify-between hover:bg-white/5 p-2 rounded-lg transition-colors group">
+                            <span class="text-slate-300 group-hover:text-white transition-colors">{{ item.name }}</span>
+                            <a href="{{ item.link }}" target="_blank" class="text-xs bg-slate-700 hover:bg-blue-600 text-white py-1.5 px-4 rounded-md transition-all shadow-sm">
+                                Lacak
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>
